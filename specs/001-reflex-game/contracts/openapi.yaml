@@ -1,0 +1,309 @@
+openapi: 3.0.3
+info:
+  title: PoReflex API
+  description: |
+    High-precision reaction time testing game API.
+    
+    All endpoints return RFC 7807 Problem Details for errors.
+  version: 1.0.0
+  contact:
+    email: punkouter26@gmail.com
+
+servers:
+  - url: /api
+    description: API base path
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Check API and storage health
+      description: |
+        Validates connectivity to Azure Table Storage.
+        Called by client before allowing game start.
+      tags:
+        - System
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /game/submit:
+    post:
+      operationId: submitScore
+      summary: Submit a completed game score
+      description: |
+        Submits a valid game session score to the leaderboard.
+        
+        Rate limited to 10 submissions per minute per source 
+        (device fingerprint + IP address).
+        
+        Scores with average < 100ms are rejected as inhuman.
+      tags:
+        - Game
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScoreSubmissionRequest'
+      responses:
+        '200':
+          description: Score submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreSubmissionResponse'
+        '400':
+          description: Invalid score submission
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                inhumanSpeed:
+                  summary: Inhuman speed detection
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "Invalid Score"
+                    status: 400
+                    detail: "Average reaction time below 100ms is not biologically possible"
+                    instance: "/api/game/submit"
+                invalidNickname:
+                  summary: Invalid nickname
+                  value:
+                    type: "https://tools.ietf.org/html/rfc7807"
+                    title: "Validation Error"
+                    status: 400
+                    detail: "Nickname must contain only letters"
+                    instance: "/api/game/submit"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://tools.ietf.org/html/rfc7807"
+                title: "Too Many Requests"
+                status: 429
+                detail: "Rate limit exceeded. Maximum 10 submissions per minute."
+                instance: "/api/game/submit"
+
+  /leaderboard/daily:
+    get:
+      operationId: getDailyLeaderboard
+      summary: Get today's top 10 scores
+      description: |
+        Returns the top 10 fastest average reaction times for today (UTC).
+        Sorted by fastest time, ties broken by earliest submission.
+      tags:
+        - Leaderboard
+      responses:
+        '200':
+          description: Daily leaderboard retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+              example:
+                viewType: "Daily"
+                asOf: "2025-12-11"
+                entries:
+                  - rank: 1
+                    nickname: "FastFingers"
+                    averageMs: 185.5
+                    timestamp: "2025-12-11T10:30:00Z"
+                  - rank: 2
+                    nickname: "QuickDraw"
+                    averageMs: 192.3
+                    timestamp: "2025-12-11T09:15:00Z"
+
+  /leaderboard/alltime:
+    get:
+      operationId: getAllTimeLeaderboard
+      summary: Get all-time top 10 scores
+      description: |
+        Returns the top 10 fastest average reaction times across all time.
+        Sorted by fastest time, ties broken by earliest submission.
+      tags:
+        - Leaderboard
+      responses:
+        '200':
+          description: All-time leaderboard retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+              example:
+                viewType: "AllTime"
+                asOf: null
+                entries:
+                  - rank: 1
+                    nickname: "Legend"
+                    averageMs: 165.2
+                    timestamp: "2025-11-15T14:22:00Z"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required:
+        - isHealthy
+        - storageConnected
+      properties:
+        isHealthy:
+          type: boolean
+          description: Overall system health status
+        storageConnected:
+          type: boolean
+          description: Whether Azure Table Storage is reachable
+        errorMessage:
+          type: string
+          nullable: true
+          description: Error details if unhealthy
+
+    ScoreSubmissionRequest:
+      type: object
+      required:
+        - nickname
+        - averageMs
+        - reactionTimes
+        - deviceFingerprint
+      properties:
+        nickname:
+          type: string
+          minLength: 1
+          maxLength: 15
+          pattern: '^[A-Za-z]+$'
+          description: Player's nickname (letters only)
+          example: "QuickDraw"
+        averageMs:
+          type: number
+          format: double
+          minimum: 100
+          maximum: 2000
+          description: Average reaction time in milliseconds
+          example: 215.5
+        reactionTimes:
+          type: array
+          items:
+            type: number
+            format: double
+            minimum: 0.05
+            maximum: 2000
+          minItems: 6
+          maxItems: 6
+          description: Individual reaction times for each of 6 bars
+          example: [210.5, 220.3, 205.1, 230.0, 215.8, 211.3]
+        deviceFingerprint:
+          type: string
+          description: Client-generated device fingerprint for rate limiting
+          example: "a1b2c3d4e5f6..."
+
+    ScoreSubmissionResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          description: Whether the score was accepted
+        dailyRank:
+          type: integer
+          nullable: true
+          description: Player's rank on today's leaderboard (null if not in top 10)
+          example: 3
+        allTimeRank:
+          type: integer
+          nullable: true
+          description: Player's rank on all-time leaderboard (null if not in top 10)
+          example: 7
+
+    LeaderboardResponse:
+      type: object
+      required:
+        - viewType
+        - entries
+      properties:
+        viewType:
+          type: string
+          enum: [Daily, AllTime]
+          description: Type of leaderboard view
+        asOf:
+          type: string
+          format: date
+          nullable: true
+          description: Date for Daily view (null for AllTime)
+        entries:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/LeaderboardEntry'
+
+    LeaderboardEntry:
+      type: object
+      required:
+        - rank
+        - nickname
+        - averageMs
+        - timestamp
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Position on the leaderboard
+        nickname:
+          type: string
+          description: Player's nickname
+        averageMs:
+          type: number
+          format: double
+          description: Average reaction time in milliseconds
+        timestamp:
+          type: string
+          format: date-time
+          description: When the score was submitted
+
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI reference identifying the problem type
+        title:
+          type: string
+          description: Short human-readable summary
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Human-readable explanation
+        instance:
+          type: string
+          description: URI reference identifying the specific occurrence
+
+tags:
+  - name: System
+    description: Health and status endpoints
+  - name: Game
+    description: Game session management
+  - name: Leaderboard
+    description: Leaderboard queries

@@ -1,0 +1,319 @@
+/*
+ * PoReflex Retro Arcade Theme (T068)
+ * Visual aesthetic inspired by 1980s arcade cabinets
+ * 
+ * Colors:
+ * - Background: Black (#000000)
+ * - Primary: Neon Green (#00FF88)
+ * - Secondary: Amber/Orange (#FFA500)
+ * - Error: Red (#FF4757)
+ * - Text: White (#FFFFFF)
+ */
+
+/* === CSS Variables === */
+:root {
+    /* Core Colors */
+    --retro-black: #000000;
+    --retro-dark: #0d0d0d;
+    --retro-darker: #1a1a2e;
+    --retro-neon-green: #00ff88;
+    --retro-neon-green-dim: #00cc6a;
+    --retro-amber: #ffa500;
+    --retro-amber-dim: #cc8400;
+    --retro-red: #ff4757;
+    --retro-white: #ffffff;
+    --retro-gray: #a0a0a0;
+    --retro-gray-dark: #404040;
+
+    /* Shadows & Glow */
+    --glow-green: 0 0 10px var(--retro-neon-green), 0 0 20px var(--retro-neon-green);
+    --glow-amber: 0 0 10px var(--retro-amber), 0 0 20px var(--retro-amber);
+    --glow-red: 0 0 10px var(--retro-red), 0 0 20px var(--retro-red);
+
+    /* Typography */
+    --font-pixel: 'Press Start 2P', 'Courier New', monospace;
+    --font-mono: 'Courier New', 'Consolas', monospace;
+
+    /* Scanline effect */
+    --scanline-color: rgba(0, 0, 0, 0.15);
+    --scanline-size: 2px;
+}
+
+/* === Scanline Overlay Effect (T069) === */
+.scanlines::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent var(--scanline-size),
+        var(--scanline-color) var(--scanline-size),
+        var(--scanline-color) calc(var(--scanline-size) * 2)
+    );
+    pointer-events: none;
+    z-index: 9999;
+}
+
+/* CRT screen curvature effect (subtle) */
+.crt-effect {
+    position: relative;
+}
+
+.crt-effect::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+        ellipse at center,
+        transparent 0%,
+        rgba(0, 0, 0, 0.2) 90%,
+        rgba(0, 0, 0, 0.4) 100%
+    );
+    pointer-events: none;
+}
+
+/* === Neon Glow Effects (T070) === */
+.glow-green {
+    text-shadow: var(--glow-green);
+    color: var(--retro-neon-green);
+}
+
+.glow-amber {
+    text-shadow: var(--glow-amber);
+    color: var(--retro-amber);
+}
+
+.glow-red {
+    text-shadow: var(--glow-red);
+    color: var(--retro-red);
+}
+
+/* Box glow for active elements */
+.box-glow-green {
+    box-shadow: var(--glow-green);
+    border: 2px solid var(--retro-neon-green);
+}
+
+.box-glow-amber {
+    box-shadow: var(--glow-amber);
+    border: 2px solid var(--retro-amber);
+}
+
+/* Pulsing glow animation */
+@keyframes pulse-glow {
+    0%, 100% {
+        filter: brightness(1);
+        text-shadow: 0 0 10px currentColor;
+    }
+    50% {
+        filter: brightness(1.3);
+        text-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+    }
+}
+
+.pulse-glow {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* === Pixel/Monospace Font Styling (T071) === */
+.pixel-text {
+    font-family: var(--font-pixel);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.mono-text {
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+}
+
+/* Score display */
+.score-display {
+    font-family: var(--font-mono);
+    font-size: 3rem;
+    font-weight: bold;
+    color: var(--retro-neon-green);
+    text-shadow: var(--glow-green);
+}
+
+/* Leaderboard text */
+.leaderboard-text {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--retro-white);
+}
+
+/* === Portrait Orientation Lock (T072) === */
+@media screen and (orientation: landscape) and (max-height: 600px) {
+    .orientation-lock::before {
+        content: "Please rotate your device to portrait mode";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--retro-black);
+        color: var(--retro-amber);
+        font-family: var(--font-mono);
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+        z-index: 10000;
+    }
+}
+
+/* === Desktop Mobile Proportions (T073) === */
+@media screen and (min-width: 768px) {
+    .mobile-container {
+        max-width: 414px; /* iPhone 12/13 Pro width */
+        margin: 0 auto;
+        min-height: 100vh;
+        background: var(--retro-dark);
+        position: relative;
+        box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
+    }
+
+    body {
+        background: var(--retro-black);
+    }
+}
+
+/* === Retro Button Styles === */
+.retro-button {
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    padding: 1rem 2rem;
+    border: 3px solid var(--retro-neon-green);
+    background: linear-gradient(
+        180deg,
+        rgba(0, 255, 136, 0.2) 0%,
+        rgba(0, 255, 136, 0.1) 100%
+    );
+    color: var(--retro-neon-green);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 
+        0 0 10px rgba(0, 255, 136, 0.3),
+        inset 0 0 20px rgba(0, 255, 136, 0.1);
+}
+
+.retro-button:hover:not(:disabled) {
+    background: linear-gradient(
+        180deg,
+        rgba(0, 255, 136, 0.4) 0%,
+        rgba(0, 255, 136, 0.2) 100%
+    );
+    box-shadow: 
+        0 0 20px rgba(0, 255, 136, 0.5),
+        inset 0 0 30px rgba(0, 255, 136, 0.2);
+    text-shadow: 0 0 10px var(--retro-neon-green);
+}
+
+.retro-button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.retro-button:disabled {
+    border-color: var(--retro-gray-dark);
+    color: var(--retro-gray-dark);
+    background: transparent;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* Amber variant */
+.retro-button.amber {
+    border-color: var(--retro-amber);
+    color: var(--retro-amber);
+    background: linear-gradient(
+        180deg,
+        rgba(255, 165, 0, 0.2) 0%,
+        rgba(255, 165, 0, 0.1) 100%
+    );
+    box-shadow: 
+        0 0 10px rgba(255, 165, 0, 0.3),
+        inset 0 0 20px rgba(255, 165, 0, 0.1);
+}
+
+/* === Retro Input Styles === */
+.retro-input {
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    padding: 1rem;
+    background: var(--retro-dark);
+    border: 2px solid var(--retro-neon-green);
+    color: var(--retro-neon-green);
+    text-align: center;
+    letter-spacing: 2px;
+    outline: none;
+    transition: all 0.15s ease;
+}
+
+.retro-input:focus {
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+    border-color: var(--retro-neon-green);
+}
+
+.retro-input::placeholder {
+    color: var(--retro-gray);
+    font-size: 0.9rem;
+}
+
+.retro-input.error {
+    border-color: var(--retro-red);
+    box-shadow: 0 0 10px rgba(255, 71, 87, 0.3);
+}
+
+/* === Animation Keyframes === */
+@keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+.flicker {
+    animation: flicker 0.1s infinite;
+}
+
+.blink {
+    animation: blink 1s step-end infinite;
+}
+
+/* Bar growth gradient - neon green to white hot */
+.bar-gradient {
+    background: linear-gradient(
+        to top,
+        var(--retro-neon-green) 0%,
+        #00ffaa 50%,
+        #aaffcc 80%,
+        var(--retro-white) 100%
+    );
+}
+
+/* Stopped bar - amber */
+.bar-stopped {
+    background: linear-gradient(
+        to top,
+        var(--retro-amber) 0%,
+        #ffcc00 50%,
+        #ffee88 80%,
+        var(--retro-white) 100%
+    );
+}

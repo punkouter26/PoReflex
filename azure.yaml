@@ -1,0 +1,44 @@
+# Azure Developer CLI configuration for PoReflex
+# https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/
+
+name: poreflex
+metadata:
+  template: PoReflex-template@0.0.1
+
+# Infrastructure configuration
+infra:
+  provider: bicep
+  path: ./infra
+  module: main
+
+# Service definitions
+services:
+  api:
+    project: ./src/Po.Reflex.Api
+    language: dotnet
+    host: appservice
+    
+# Hooks for custom scripts
+hooks:
+  preprovision:
+    shell: pwsh
+    run: |
+      Write-Host "Preparing to provision Azure resources..."
+      
+  postprovision:
+    shell: pwsh
+    run: |
+      Write-Host "Azure resources provisioned successfully!"
+      Write-Host "Web App URL: $env:AZURE_WEBAPP_URL"
+      
+  predeploy:
+    shell: pwsh
+    run: |
+      Write-Host "Building and preparing for deployment..."
+      dotnet build --configuration Release
+      
+  postdeploy:
+    shell: pwsh
+    run: |
+      Write-Host "Deployment complete!"
+      Write-Host "Application is now live at: $env:AZURE_WEBAPP_URL"

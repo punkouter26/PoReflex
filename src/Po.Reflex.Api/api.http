@@ -1,0 +1,104 @@
+@* 
+    API test file for PoReflex endpoints
+    Use with REST Client extension in VS Code or similar tools
+*@
+
+### Variables
+@baseUrl = http://localhost:5000/api
+
+### Health Check
+GET {{baseUrl}}/health HTTP/1.1
+Accept: application/json
+
+### Health Check - Detailed
+GET {{baseUrl}}/health/detail HTTP/1.1
+Accept: application/json
+
+### Get Leaderboard (Top 100)
+GET {{baseUrl}}/leaderboard HTTP/1.1
+Accept: application/json
+
+### Get Leaderboard (Top 10)
+GET {{baseUrl}}/leaderboard?top=10 HTTP/1.1
+Accept: application/json
+
+### Get Daily Leaderboard (T059)
+GET {{baseUrl}}/leaderboard/daily HTTP/1.1
+Accept: application/json
+
+### Get All-Time Leaderboard (T059)
+GET {{baseUrl}}/leaderboard/alltime HTTP/1.1
+Accept: application/json
+
+### Get All-Time Leaderboard (Top 5)
+GET {{baseUrl}}/leaderboard/alltime?top=5 HTTP/1.1
+Accept: application/json
+
+### Submit Score - Valid
+POST {{baseUrl}}/game/score HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+
+{
+    "nickname": "TestPlayer",
+    "averageMs": 245.67,
+    "reactionTimes": [232.5, 248.3, 251.2, 240.8, 255.1, 246.1]
+}
+
+### Submit Score - Invalid (Too few reaction times)
+POST {{baseUrl}}/game/score HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+
+{
+    "nickname": "TestPlayer",
+    "averageMs": 245.67,
+    "reactionTimes": [232.5, 248.3]
+}
+
+### Submit Score - Invalid (Empty nickname)
+POST {{baseUrl}}/game/score HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+
+{
+    "nickname": "",
+    "averageMs": 245.67,
+    "reactionTimes": [232.5, 248.3, 251.2, 240.8, 255.1, 246.1]
+}
+
+### Submit Score - Invalid (Nickname too long)
+POST {{baseUrl}}/game/score HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+
+{
+    "nickname": "ThisNicknameIsTooLongForValidation",
+    "averageMs": 245.67,
+    "reactionTimes": [232.5, 248.3, 251.2, 240.8, 255.1, 246.1]
+}
+
+### Submit Score - Suspicious (Very fast times - rejected)
+POST {{baseUrl}}/game/score HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+
+{
+    "nickname": "Cheater",
+    "averageMs": 50.0,
+    "reactionTimes": [45.0, 48.0, 52.0, 50.0, 55.0, 50.0]
+}
+
+### Rate Limit Test - Run multiple times quickly
+POST {{baseUrl}}/game/score HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+X-Device-Fingerprint: test-device-123
+
+{
+    "nickname": "RateLimitTest",
+    "averageMs": 300.0,
+    "reactionTimes": [290.0, 295.0, 300.0, 305.0, 310.0, 300.0]
+}
+
+###

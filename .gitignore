@@ -1,0 +1,74 @@
+# .NET
+bin/
+obj/
+out/
+publish/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.dll
+*.exe
+*.pdb
+
+# IDE
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/
+artifacts/
+
+# Test results
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Node (for any tooling)
+node_modules/
+
+# Azure
+.azure/
+
+# Azurite local storage
+__azurite_db_*
+__blobstorage__/
+__queuestorage__/
+__tablestorage__/
+
+# Playwright
+playwright-report/
+playwright/.cache/
+test-results/
+
+# NuGet
+*.nupkg
+.nuget/
+packages/
+
+# Secrets (never commit)
+*.pfx
+*.snk
+secrets.json

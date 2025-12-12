@@ -1,0 +1,27 @@
+@* StopButton Component
+   Full-width touch target with safe area padding (FR-007, FR-009)
+*@
+
+<button class="stop-button @(Disabled ? "disabled" : "")"
+        @onclick="HandleClick"
+        @ontouchstart="HandleClick"
+        disabled="@Disabled"
+        data-testid="stop-button">
+    <span class="stop-text">STOP</span>
+</button>
+
+@code {
+    [Parameter]
+    public EventCallback OnStop { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private async Task HandleClick()
+    {
+        if (!Disabled)
+        {
+            await OnStop.InvokeAsync();
+        }
+    }
+}

@@ -1,0 +1,89 @@
+@page "/"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@using Po.Reflex.Shared.DTOs
+
+<PageTitle>PoReflex - Reaction Time Tester</PageTitle>
+
+<div class="home-container">
+    <header class="home-header">
+        <h1>PoReflex</h1>
+        <p class="tagline">Test Your Reaction Time</p>
+        
+        @if (!isApiHealthy)
+        {
+            <p class="offline-status">⚠️ Offline Mode</p>
+        }
+    </header>
+
+    <div class="nickname-form">
+        <NicknameInput @bind-Value="nickname" OnValidChanged="HandleValidChanged" />
+
+        <button class="btn-play" @onclick="StartGame" disabled="@(!CanPlay)" data-testid="start-button">
+            @(isApiHealthy ? "Play" : "Offline")
+        </button>
+    </div>
+
+    <section class="leaderboard-section">
+        <Leaderboard @ref="leaderboardRef" HighlightNickname="@highlightedNickname" />
+    </section>
+</div>
+
+@code {
+    private string nickname = "";
+    private bool isNicknameValid = false;
+    private bool isApiHealthy = true;
+    private string? highlightedNickname;
+    private Leaderboard? leaderboardRef;
+
+    private bool CanPlay => isNicknameValid && isApiHealthy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckApiHealth();
+    }
+
+    private async Task CheckApiHealth()
+    {
+        try
+        {
+            var health = await Http.GetFromJsonAsync<HealthStatusDto>("/api/health");
+            isApiHealthy = health?.IsHealthy ?? false;
+        }
+        catch
+        {
+            isApiHealthy = false;
+        }
+    }
+
+    private void HandleValidChanged(bool isValid)
+    {
+        isNicknameValid = isValid;
+        StateHasChanged();
+    }
+
+    private void StartGame()
+    {
+        if (CanPlay)
+        {
+            Navigation.NavigateTo($"/game?nickname={Uri.EscapeDataString(nickname)}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Check for submitted score in query string
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            
+            if (query["submitted"] == "true" && query["nickname"] != null)
+            {
+                highlightedNickname = query["nickname"];
+                await leaderboardRef?.RefreshAsync()!;
+                StateHasChanged();
+            }
+        }
+    }
+}
