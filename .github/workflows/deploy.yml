@@ -74,7 +74,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web
-          path: src/Po.Reflex.Web/.next
+          path: |
+            src/Po.Reflex.Web/.next
+            src/Po.Reflex.Web/public
+            src/Po.Reflex.Web/package.json
+          if-no-files-found: error
 
   deploy-api:
     needs: build-and-test
@@ -119,11 +123,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Download web artifact
         uses: actions/download-artifact@v4
         with:
           name: web
-          path: src/Po.Reflex.Web/.next
+          path: src/Po.Reflex.Web
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -132,6 +141,9 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Install SWA CLI
+        run: npm install -g @azure/static-web-apps-cli
+
       - name: Get SWA deployment token
         id: swa-token
         run: |
@@ -139,12 +151,10 @@ jobs:
           echo "::add-mask::$token"
           echo "token=$token" >> $GITHUB_OUTPUT
 
-      - name: Deploy to Static Web App
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: upload
-          app_location: src/Po.Reflex.Web
-          output_location: .next
-          skip_app_build: true
+      - name: Deploy with SWA CLI
+        run: |
+          swa deploy src/Po.Reflex.Web/.next/standalone \
+            --deployment-token ${{ steps.swa-token.outputs.token }} \
+            --env production
+        env:
+          SWA_CLI_DEPLOYMENT_TOKEN: ${{ steps.swa-token.outputs.token }}
