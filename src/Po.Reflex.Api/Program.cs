@@ -1,4 +1,4 @@
-using System.Text.Json;
+using Azure.Identity;
 using FluentValidation;
 using MediatR;
 using Po.Reflex.Api.Infrastructure.Metrics;
@@ -6,14 +6,53 @@ using Po.Reflex.Api.Infrastructure.Middleware;
 using Po.Reflex.Api.Infrastructure.Pipeline;
 using Po.Reflex.Api.Infrastructure.TableStorage;
 using Serilog;
+using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
-Log.Logger = new LoggerConfiguration()
+// #5 - Configure Azure Key Vault (PoShared resource group per copilot-instructions.md)
+// Production: Use Key Vault with Managed Identity
+// Development: Falls back to user-secrets or appsettings
+var keyVaultUri = builder.Configuration["KeyVault:Uri"];
+if (!string.IsNullOrEmpty(keyVaultUri))
+{
+    try
+    {
+        builder.Configuration.AddAzureKeyVault(
+            new Uri(keyVaultUri),
+            new DefaultAzureCredential(new DefaultAzureCredentialOptions
+            {
+                // Use Managed Identity in Azure, fall back to Azure CLI/VS for local dev
+                ExcludeEnvironmentCredential = false,
+                ExcludeManagedIdentityCredential = false,
+                ExcludeAzureCliCredential = false,
+                ExcludeVisualStudioCredential = false
+            }));
+        Log.Information("Azure Key Vault configured: {KeyVaultUri}", keyVaultUri);
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Failed to configure Key Vault, using local configuration");
+    }
+}
+
+// Configure Serilog with optional Application Insights
+var loggerConfig = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .CreateLogger();
+    .Enrich.FromLogContext();
+
+// Add Application Insights sink if connection string is available (from Key Vault or env)
+var appInsightsConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"]
+    ?? builder.Configuration["PoReflex-AppInsightsConnectionString"];
+if (!string.IsNullOrEmpty(appInsightsConnectionString))
+{
+    loggerConfig = loggerConfig.WriteTo.ApplicationInsights(
+        appInsightsConnectionString,
+        new TraceTelemetryConverter());
+    Log.Information("Application Insights configured for Serilog");
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 builder.Host.UseSerilog();
 
@@ -39,20 +78,20 @@ builder.Services.AddSingleton<ILeaderboardRepository, LeaderboardRepository>();
 builder.Services.AddMetrics();
 builder.Services.AddSingleton<GameMetrics>();
 
-// CORS for Blazor WASM
+// CORS for Next.js frontend
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? ["http://localhost:3000"];
+        
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
-
-// Blazor WASM hosting
-builder.Services.AddControllersWithViews();
-builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
@@ -61,14 +100,15 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "PoReflex API v1"));
-    app.UseWebAssemblyDebugging();
+    
+    // #3 - Skip HTTPS redirect in development to avoid port warning
+    Log.Information("Development mode: HTTPS redirect disabled");
 }
-
-app.UseHttpsRedirection();
-
-// Serve Blazor WebAssembly static files
-app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
+else
+{
+    // #3 - Only use HTTPS redirect in production
+    app.UseHttpsRedirection();
+}
 
 app.UseRouting();
 app.UseCors();
@@ -76,6 +116,28 @@ app.UseCors();
 // Custom middleware (only for API routes)
 app.UseMiddleware<ProblemDetailsMiddleware>();
 app.UseMiddleware<RateLimitingMiddleware>();
+
+// Root-level health endpoint (for standard health checks)
+app.MapGet("/health", async (ILeaderboardRepository repo) =>
+{
+    try
+    {
+        var isConnected = await repo.IsConnectedAsync();
+        return Results.Ok(new Po.Reflex.Shared.DTOs.HealthStatusDto(
+            IsHealthy: isConnected,
+            StorageConnected: isConnected,
+            ErrorMessage: isConnected ? null : "Storage connection failed"
+        ));
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new Po.Reflex.Shared.DTOs.HealthStatusDto(
+            IsHealthy: false,
+            StorageConnected: false,
+            ErrorMessage: ex.Message
+        ));
+    }
+}).WithTags("Health").ExcludeFromDescription();
 
 // Map API endpoints
 app.MapGet("/api/health", async (ILeaderboardRepository repo) =>
@@ -168,12 +230,8 @@ app.MapPost("/api/game/score", async (
         ErrorMessage: result.ErrorMessage
     ));
 })
-.WithName("SubmitScore");
-
-// Map Blazor fallback
-app.MapRazorPages();
-app.MapControllers();
-app.MapFallbackToFile("index.html");
+.WithName("SubmitScore")
+.WithTags("Game");
 
 Log.Information("PoReflex API starting...");
 app.Run();

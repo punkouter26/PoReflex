@@ -14,9 +14,12 @@ env:
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  API_APP_NAME: poreflex-api
+  SWA_NAME: poreflex-web
+  RESOURCE_GROUP: PoReflex
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,26 +39,52 @@ jobs:
         run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
 
       - name: Publish API
-        run: dotnet publish src/Po.Reflex.Api/Po.Reflex.Api.csproj --configuration Release --output ./publish
+        run: dotnet publish src/Po.Reflex.Api/Po.Reflex.Api.csproj --configuration Release --output ./publish/api
 
-      - name: Upload artifact
+      - name: Upload API artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app
-          path: ./publish
+          name: api
+          path: ./publish/api
 
-  deploy:
-    needs: build
+  build-web:
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download artifact
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: src/Po.Reflex.Web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: src/Po.Reflex.Web
+
+      - name: Build Next.js
+        run: npm run build
+        working-directory: src/Po.Reflex.Web
+        env:
+          NEXT_PUBLIC_API_URL: https://poreflex-api.azurewebsites.net
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: src/Po.Reflex.Web/.next
+
+  deploy-api:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download API artifact
         uses: actions/download-artifact@v4
         with:
-          name: app
-          path: ./publish
+          name: api
+          path: ./publish/api
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -64,24 +93,37 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Install Azure Developer CLI
-        uses: Azure/setup-azd@v1
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.API_APP_NAME }}
+          package: ./publish/api
 
-      - name: Deploy with azd
+      - name: Health Check
         run: |
-          azd auth login --client-id ${{ env.AZURE_CLIENT_ID }} --federated-credential-provider github --tenant-id ${{ env.AZURE_TENANT_ID }}
-          azd deploy --no-prompt
-        env:
-          AZURE_ENV_NAME: prod
-          AZURE_LOCATION: eastus
+          echo "Waiting for deployment to complete..."
+          sleep 30
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.API_APP_NAME }}.azurewebsites.net/health)
+          if [ "$response" = "200" ]; then
+            echo "✅ Health check passed!"
+          else
+            echo "❌ Health check failed with status: $response"
+            exit 1
+          fi
 
-  infrastructure:
+  deploy-web:
+    needs: build-web
     runs-on: ubuntu-latest
     environment: production
-    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
 
+      - name: Download web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: src/Po.Reflex.Web/.next
+
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
@@ -89,13 +131,19 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Install Azure Developer CLI
-        uses: Azure/setup-azd@v1
-
-      - name: Provision with azd
+      - name: Get SWA deployment token
+        id: swa-token
         run: |
-          azd auth login --client-id ${{ env.AZURE_CLIENT_ID }} --federated-credential-provider github --tenant-id ${{ env.AZURE_TENANT_ID }}
-          azd provision --no-prompt
-        env:
-          AZURE_ENV_NAME: prod
-          AZURE_LOCATION: eastus
+          token=$(az staticwebapp secrets list --name ${{ env.SWA_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "properties.apiKey" -o tsv)
+          echo "::add-mask::$token"
+          echo "token=$token" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: src/Po.Reflex.Web
+          output_location: .next
+          skip_app_build: true

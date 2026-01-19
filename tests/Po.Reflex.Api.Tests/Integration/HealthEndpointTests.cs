@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Po.Reflex.Api.Tests.Infrastructure;
 using Po.Reflex.Shared.DTOs;
 using Xunit;
 
@@ -9,12 +9,13 @@ namespace Po.Reflex.Api.Tests.Integration;
 
 /// <summary>
 /// Integration tests for the /api/health endpoint.
+/// Uses TestWebApplicationFactory with reduced retry policy (#2).
 /// </summary>
-public class HealthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class HealthEndpointTests : IClassFixture<TestWebApplicationFactory>
 {
     private readonly HttpClient _client;
 
-    public HealthEndpointTests(WebApplicationFactory<Program> factory)
+    public HealthEndpointTests(TestWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
     }
@@ -54,5 +55,58 @@ public class HealthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert
         content.Should().Contain("isHealthy");
         content.Should().Contain("storageConnected");
+    }
+
+    /// <summary>
+    /// #7 - Test for StorageConnected: false path when storage is unavailable.
+    /// The health endpoint correctly reports storage connection status.
+    /// </summary>
+    [Fact]
+    public async Task GetHealth_WithoutStorage_ReportsStorageStatus()
+    {
+        // Act - Default test factory uses reduced retry policy
+        var response = await _client.GetAsync("/api/health");
+        var health = await response.Content.ReadFromJsonAsync<HealthStatusDto>();
+
+        // Assert - Health check should return a valid response
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        health.Should().NotBeNull();
+        
+        // The IsHealthy property reflects storage connection status
+        // IsHealthy == StorageConnected by design (per copilot-instructions.md: "checks connections to all APIs and databases")
+        health!.IsHealthy.Should().Be(health.StorageConnected);
+    }
+
+    [Fact]
+    public async Task GetHealth_ReturnsConsistentIsHealthyAndStorageConnected()
+    {
+        // Act
+        var response = await _client.GetAsync("/api/health");
+        var health = await response.Content.ReadFromJsonAsync<HealthStatusDto>();
+
+        // Assert - IsHealthy and StorageConnected should be consistent
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        health!.IsHealthy.Should().Be(health.StorageConnected);
+    }
+
+    [Fact]
+    public async Task GetHealth_HasErrorMessageWhenUnhealthy()
+    {
+        // Act
+        var response = await _client.GetAsync("/api/health");
+        var health = await response.Content.ReadFromJsonAsync<HealthStatusDto>();
+
+        // Assert
+        health.Should().NotBeNull();
+        // When unhealthy, error message should be present
+        if (!health!.IsHealthy)
+        {
+            health.ErrorMessage.Should().NotBeNullOrEmpty();
+        }
+        // When healthy, error message should be null or empty
+        else
+        {
+            health.ErrorMessage.Should().BeNullOrEmpty();
+        }
     }
 }

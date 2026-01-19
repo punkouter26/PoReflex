@@ -1,0 +1,24 @@
+# Build outputs
+**/bin/
+**/obj/
+**/.next/
+**/out/
+**/node_modules/
+
+# Test results
+**/TestResults/
+**/coverage/
+**/playwright-report/
+**/test-results/
+
+# IDE and tooling
+.vs/
+*.user
+*.suo
+
+# Logs
+*.log
+
+# Environment files with secrets
+.env.local
+.env.*.local

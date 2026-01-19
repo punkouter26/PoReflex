@@ -5,40 +5,52 @@ name: poreflex
 metadata:
   template: PoReflex-template@0.0.1
 
-# Infrastructure configuration
-infra:
-  provider: bicep
-  path: ./infra
-  module: main
-
-# Service definitions
+# Service definitions - uses existing shared infrastructure
 services:
   api:
     project: ./src/Po.Reflex.Api
     language: dotnet
     host: appservice
+    resourceName: poreflex-api
     
+  web:
+    project: ./src/Po.Reflex.Web
+    language: js
+    host: staticwebapp
+    resourceName: poreflex-web
+
+# Resource groups
+resourceGroups:
+  app: PoReflex
+  shared: PoShared
+
 # Hooks for custom scripts
 hooks:
   preprovision:
     shell: pwsh
     run: |
-      Write-Host "Preparing to provision Azure resources..."
+      Write-Host "Using existing resources in PoShared and PoReflex resource groups..."
       
   postprovision:
     shell: pwsh
     run: |
-      Write-Host "Azure resources provisioned successfully!"
-      Write-Host "Web App URL: $env:AZURE_WEBAPP_URL"
+      Write-Host "Resources configured successfully!"
+      Write-Host "API URL: https://poreflex-api.azurewebsites.net"
+      Write-Host "Web URL: https://icy-sky-0d994161e.2.azurestaticapps.net"
       
   predeploy:
     shell: pwsh
     run: |
       Write-Host "Building and preparing for deployment..."
-      dotnet build --configuration Release
+      dotnet build --configuration Release ./src/Po.Reflex.Api
+      Push-Location ./src/Po.Reflex.Web
+      npm ci
+      npm run build
+      Pop-Location
       
   postdeploy:
     shell: pwsh
     run: |
       Write-Host "Deployment complete!"
-      Write-Host "Application is now live at: $env:AZURE_WEBAPP_URL"
+      Write-Host "API: https://poreflex-api.azurewebsites.net/health"
+      Write-Host "Web: https://icy-sky-0d994161e.2.azurestaticapps.net"

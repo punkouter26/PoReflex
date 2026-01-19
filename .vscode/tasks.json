@@ -34,7 +34,7 @@
       }
     },
     {
-      "label": "watch",
+      "label": "watch-api",
       "command": "dotnet",
       "type": "process",
       "args": [
@@ -45,6 +45,59 @@
       ],
       "problemMatcher": "$msCompile",
       "isBackground": true
+    },
+    {
+      "label": "dev-web",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/src/Po.Reflex.Web"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^(.*)$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Starting...",
+          "endsPattern": "Ready in"
+        }
+      }
+    },
+    {
+      "label": "dev",
+      "dependsOn": ["watch-api", "dev-web"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "install-web",
+      "type": "shell",
+      "command": "npm install",
+      "options": {
+        "cwd": "${workspaceFolder}/src/Po.Reflex.Web"
+      }
+    },
+    {
+      "label": "e2e-test",
+      "type": "shell",
+      "command": "npm test",
+      "options": {
+        "cwd": "${workspaceFolder}/tests/e2e"
+      },
+      "dependsOn": ["install-e2e"]
+    },
+    {
+      "label": "install-e2e",
+      "type": "shell",
+      "command": "npm install && npx playwright install chromium",
+      "options": {
+        "cwd": "${workspaceFolder}/tests/e2e"
+      }
     }
   ]
 }

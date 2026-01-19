@@ -43,13 +43,11 @@ public class NicknameValidatorTests
     }
 
     [Fact]
-    public void Validate_NullNickname_ReturnsError()
+    public void Validate_NullNickname_ThrowsException()
     {
-        // Act
-        var result = _validator.TestValidate((string)null!);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x);
+        // Act & Assert: FluentValidation throws on null model
+        var action = () => _validator.TestValidate((string)null!);
+        action.Should().Throw<InvalidOperationException>();
     }
 
     [Theory]

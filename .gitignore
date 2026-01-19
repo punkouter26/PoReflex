@@ -72,3 +72,7 @@ packages/
 *.pfx
 *.snk
 secrets.json
+logs*.zip
+logs*/
+publish/
+.playwright-mcp/

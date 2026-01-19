@@ -71,7 +71,24 @@ public class LeaderboardRepository : ILeaderboardRepository
         var connectionString = configuration.GetConnectionString("TableStorage")
             ?? throw new InvalidOperationException("TableStorage connection string not configured");
 
-        var serviceClient = new TableServiceClient(connectionString);
+        // #2 - Configurable retry policy for test environment performance
+        var options = new TableClientOptions();
+        var maxRetries = configuration.GetValue("Azure:Retry:MaxRetries", 4);
+        options.Retry.MaxRetries = maxRetries;
+        
+        var delay = configuration.GetValue<TimeSpan?>("Azure:Retry:Delay", null);
+        if (delay.HasValue)
+        {
+            options.Retry.Delay = delay.Value;
+        }
+        
+        var maxDelay = configuration.GetValue<TimeSpan?>("Azure:Retry:MaxDelay", null);
+        if (maxDelay.HasValue)
+        {
+            options.Retry.MaxDelay = maxDelay.Value;
+        }
+
+        var serviceClient = new TableServiceClient(connectionString, options);
         _tableClient = serviceClient.GetTableClient(TableName);
     }
 
