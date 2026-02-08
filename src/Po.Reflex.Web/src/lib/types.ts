@@ -14,7 +14,9 @@ export interface LeaderboardEntryDto {
 }
 
 export interface LeaderboardResponse {
+  viewType?: string;
   entries: LeaderboardEntryDto[];
+  asOf?: string | null;
 }
 
 export interface ScoreSubmissionRequest {
@@ -28,6 +30,17 @@ export interface ScoreSubmissionResponse {
   success: boolean;
   rank?: number;
   errorMessage?: string;
+}
+
+// Diagnostics types
+export interface DiagEntry {
+  key: string;
+  value: string;
+}
+
+export interface DiagResponse {
+  environment: string;
+  sections: Record<string, DiagEntry[]>;
 }
 
 // Game Engine Types
@@ -47,4 +60,10 @@ export interface BarState {
   reactionTime: number | null;
 }
 
-export type GameState = "idle" | "waiting" | "moving" | "stopped" | "completed" | "failed";
+export type GameState =
+  | "idle"
+  | "waiting"
+  | "moving"
+  | "stopped"
+  | "completed"
+  | "failed";

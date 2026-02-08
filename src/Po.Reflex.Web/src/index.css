@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* PoReflex - Custom Theme Variables */
+/* PoReflex — Custom Theme Variables */
 @theme {
   --color-primary: #00ff00;
   --color-primary-glow: rgba(0, 255, 0, 0.3);
@@ -11,16 +11,17 @@
   --color-error: #ff0000;
   --color-text: #00ff00;
   --color-text-muted: #666666;
-  
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  
+
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
   --spacing-safe-top: env(safe-area-inset-top, 0px);
   --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
   --spacing-safe-left: env(safe-area-inset-left, 0px);
   --spacing-safe-right: env(safe-area-inset-right, 0px);
 }
 
-/* Base Styles */
+/* ───── Base Styles ───── */
 html,
 body {
   @apply bg-background text-text font-mono antialiased;
@@ -31,7 +32,6 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Prevent iOS scroll bounce */
 html {
   position: fixed;
   width: 100%;
@@ -47,7 +47,7 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Custom Utilities */
+/* ───── Utilities ───── */
 @utility glow-primary {
   box-shadow: 0 0 15px var(--color-primary-glow);
 }
@@ -56,7 +56,7 @@ body {
   box-shadow: 0 0 15px rgba(255, 140, 0, 0.3);
 }
 
-/* Game Container Styles */
+/* ───── Game Container ───── */
 .game-container {
   @apply flex flex-col h-dvh w-full bg-background;
   padding-top: var(--spacing-safe-top);
@@ -75,10 +75,10 @@ body {
   height: 15dvh;
 }
 
-/* Stop Button Styles */
+/* ───── Stop Button ───── */
 .stop-button {
   @apply w-full max-w-md h-full rounded-2xl text-3xl font-bold uppercase tracking-wider
-         transition-all duration-150 ease-out select-none;
+    transition-all duration-150 ease-out select-none;
   @apply bg-primary text-background border-4 border-primary;
   touch-action: manipulation;
 }
@@ -91,7 +91,7 @@ body {
   @apply bg-grid text-text-muted border-grid cursor-not-allowed opacity-50;
 }
 
-/* Leaderboard Styles */
+/* ───── Leaderboard ───── */
 .leaderboard {
   @apply w-full max-w-md mx-auto;
 }
@@ -102,7 +102,7 @@ body {
 
 .toggle-btn {
   @apply flex-1 py-2 px-4 rounded-lg text-sm font-bold uppercase tracking-wider
-         transition-all duration-200;
+    transition-all duration-200;
   @apply bg-surface text-text-muted border border-grid;
 }
 
@@ -146,16 +146,16 @@ body {
   @apply text-secondary font-bold;
 }
 
-/* Nickname Input Styles */
+/* ───── Nickname Input ───── */
 .nickname-input-wrapper {
   @apply w-full max-w-sm;
 }
 
 .nickname-input {
   @apply w-full px-4 py-3 rounded-lg text-lg font-mono
-         bg-surface text-text border-2 border-grid
-         focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-         placeholder:text-text-muted;
+    bg-surface text-text border-2 border-grid
+    focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
+    placeholder:text-text-muted;
 }
 
 .nickname-input.error {
@@ -166,7 +166,7 @@ body {
   @apply mt-2 text-sm text-error;
 }
 
-/* Home Page Styles */
+/* ───── Home Page ───── */
 .home-container {
   @apply min-h-dvh flex flex-col items-center justify-start p-6 gap-8;
   padding-top: calc(var(--spacing-safe-top) + 1.5rem);
@@ -195,7 +195,7 @@ body {
 
 .btn-play {
   @apply w-full py-4 rounded-xl text-xl font-bold uppercase tracking-wider
-         transition-all duration-200;
+    transition-all duration-200;
   @apply bg-primary text-background;
 }
 
@@ -211,11 +211,11 @@ body {
   @apply w-full max-w-md;
 }
 
-/* Result Overlay Styles */
+/* ───── Result / Failure Overlays ───── */
 .result-overlay,
 .failure-overlay {
   @apply absolute inset-0 flex flex-col items-center justify-center
-         bg-background/90 backdrop-blur-sm p-6 text-center;
+    bg-background/90 backdrop-blur-sm p-6 text-center;
 }
 
 .result-overlay h2 {
@@ -242,7 +242,7 @@ body {
 .btn-retry,
 .menu-button {
   @apply px-8 py-3 rounded-xl text-lg font-bold uppercase tracking-wider
-         transition-all duration-200;
+    transition-all duration-200;
   @apply bg-primary text-background;
 }
 
@@ -260,11 +260,40 @@ body {
   @apply text-lg text-text-muted mb-8;
 }
 
-/* Loading States */
+/* ───── Loading / Empty State ───── */
 .loading {
   @apply text-text-muted animate-pulse;
 }
 
 .empty-message {
   @apply text-center text-text-muted py-8;
+}
+
+/* ───── Diag Page ───── */
+.diag-container {
+  @apply min-h-dvh bg-background text-text font-mono p-6;
+}
+
+.diag-container h1 {
+  @apply text-3xl font-bold text-primary mb-6;
+}
+
+.diag-section {
+  @apply mb-6 p-4 rounded-lg bg-surface border border-grid;
+}
+
+.diag-section h2 {
+  @apply text-xl font-bold text-secondary mb-3;
+}
+
+.diag-entry {
+  @apply flex justify-between py-1 border-b border-grid last:border-b-0;
+}
+
+.diag-key {
+  @apply text-text-muted;
+}
+
+.diag-value {
+  @apply text-text font-bold;
 }

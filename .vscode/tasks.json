@@ -2,6 +2,28 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "kill-dotnet",
+      "type": "shell",
+      "command": "Get-Process -Name dotnet -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Host 'Cleaned up .NET processes'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "close": true
+      }
+    },
+    {
+      "label": "kill-and-build",
+      "dependsOn": ["kill-dotnet", "build"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "start-fullstack",
+      "dependsOn": ["kill-and-build", "dev-web"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
       "label": "build",
       "command": "dotnet",
       "type": "process",
@@ -63,8 +85,8 @@
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "Starting...",
-          "endsPattern": "Ready in"
+          "beginsPattern": "VITE",
+          "endsPattern": "ready in"
         }
       }
     },

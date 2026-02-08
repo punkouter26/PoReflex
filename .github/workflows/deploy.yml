@@ -15,8 +15,8 @@ env:
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  API_APP_NAME: poreflex-api
-  SWA_NAME: poreflex-web
+  API_APP_NAME: app-poreflex-api
+  SWA_NAME: swa-poreflex
   RESOURCE_GROUP: PoReflex
 
 jobs:
@@ -64,20 +64,21 @@ jobs:
         run: npm ci
         working-directory: src/Po.Reflex.Web
 
-      - name: Build Next.js
+      - name: Build Vite app
         run: npm run build
         working-directory: src/Po.Reflex.Web
         env:
-          NEXT_PUBLIC_API_URL: https://poreflex-api.azurewebsites.net
+          VITE_API_URL: https://app-poreflex-api.azurewebsites.net
+
+      - name: Copy SWA config to dist
+        run: cp staticwebapp.config.json dist/
+        working-directory: src/Po.Reflex.Web
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
           name: web
-          path: |
-            src/Po.Reflex.Web/.next
-            src/Po.Reflex.Web/public
-            src/Po.Reflex.Web/package.json
+          path: src/Po.Reflex.Web/dist
           if-no-files-found: error
 
   deploy-api:
@@ -110,9 +111,9 @@ jobs:
           sleep 30
           response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.API_APP_NAME }}.azurewebsites.net/health)
           if [ "$response" = "200" ]; then
-            echo "✅ Health check passed!"
+            echo "Health check passed!"
           else
-            echo "❌ Health check failed with status: $response"
+            echo "Health check failed with status: $response"
             exit 1
           fi
 
@@ -121,7 +122,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - name: Download web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: ./dist
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -137,14 +142,12 @@ jobs:
           echo "::add-mask::$token"
           echo "token=$token" >> $GITHUB_OUTPUT
 
-      - name: Build and Deploy to Azure Static Web Apps
+      - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "src/Po.Reflex.Web"
+          app_location: "./dist"
           output_location: ""
-          skip_app_build: false
-        env:
-          NEXT_PUBLIC_API_URL: https://poreflex-api.azurewebsites.net
+          skip_app_build: true

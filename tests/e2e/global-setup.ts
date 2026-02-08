@@ -39,8 +39,8 @@ async function globalSetup() {
   // Check frontend availability
   const frontendAvailable = await checkFrontendAvailability();
   if (!frontendAvailable) {
-    console.warn("⚠️  Frontend not responding at http://localhost:3000");
-    console.warn("   The Next.js frontend (Po.Reflex.Web) may not be running\n");
+    console.warn("⚠️  Frontend not responding at http://localhost:5173");
+    console.warn("   The React (Vite) frontend (Po.Reflex.Web) may not be running\n");
   } else {
     console.log("✅ Frontend is responding\n");
   }
@@ -84,7 +84,7 @@ async function checkApiAvailability(): Promise<boolean> {
 
 async function checkFrontendAvailability(): Promise<boolean> {
   try {
-    const response = await fetch("http://localhost:3000", {
+    const response = await fetch("http://localhost:5173", {
       signal: AbortSignal.timeout(3000)
     });
     return response.ok || response.status === 404; // 404 is OK for SPA routes

@@ -40,6 +40,12 @@ logs/
 !.env.example
 appsettings.*.local.json
 
+# Azurite local emulator data
+__azurite_db_*
+__blobstorage__/
+__queuestorage__/
+AzuriteConfig/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -48,6 +54,10 @@ Desktop.ini
 
 # Node (for any tooling)
 node_modules/
+
+# Playwright
+test-results/
+playwright-report/
 
 # Azure
 .azure/

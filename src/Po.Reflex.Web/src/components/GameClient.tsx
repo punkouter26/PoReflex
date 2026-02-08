@@ -1,29 +1,47 @@
-"use client";
-
 import { useRef, useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { GameEngine, getGameEngine } from "@/lib/game-engine";
 import { AudioSynth } from "@/lib/audio-synth";
 import { submitScore } from "@/lib/api";
-import { StopButton } from "./stop-button";
+import { saveLocalScore } from "@/lib/storage";
+import { StopButton } from "./StopButton";
 import type { GameState, GameResult, FailureResult } from "@/lib/types";
 
-interface GameClientProps {
-  nickname: string;
-}
+/**
+ * Game page — renders the reaction-time canvas and controls.
+ * Redirects to / when the nickname query param is missing.
+ *
+ * Score submission strategy (Resilient):
+ *   1. Attempt to POST to the API.
+ *   2. Always save locally regardless of result.
+ *   3. Navigate home with ?submitted=true on success.
+ */
+export function GameClient() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nickname = searchParams.get("nickname") ?? "";
 
-export function GameClient({ nickname }: GameClientProps) {
-  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
-  const gameStartedRef = useRef(false); // Prevent double-start in Strict Mode
+  const gameStartedRef = useRef(false);
 
-  const [gameState, setGameState] = useState<"idle" | "playing" | "completed" | "failed">("idle");
+  const [gameState, setGameState] = useState<
+    "idle" | "playing" | "completed" | "failed"
+  >("idle");
   const [isPlaying, setIsPlaying] = useState(false);
   const [reactionTimes, setReactionTimes] = useState<number[]>([]);
   const [averageMs, setAverageMs] = useState(0);
   const [failureReason, setFailureReason] = useState("");
   const [failureDetail, setFailureDetail] = useState("");
+
+  // ─── Redirect when nickname is missing ───
+  useEffect(() => {
+    if (!nickname || nickname.trim().length < 3) {
+      navigate("/", { replace: true });
+    }
+  }, [nickname, navigate]);
+
+  // ─── Handlers ───
 
   const handleStop = useCallback(() => {
     if (isPlaying && engineRef.current) {
@@ -32,39 +50,37 @@ export function GameClient({ nickname }: GameClientProps) {
   }, [isPlaying]);
 
   const handleSubmitScore = useCallback(async () => {
-    const response = await submitScore({
-      nickname,
-      averageMs,
-      reactionTimes,
-    });
+    const request = { nickname, averageMs, reactionTimes };
+
+    // Always persist locally first (offline-first)
+    saveLocalScore(request);
+
+    // Attempt remote submission
+    const response = await submitScore(request);
 
     if (response.success) {
-      router.push(`/?submitted=true&nickname=${encodeURIComponent(nickname)}`);
+      navigate(`/?submitted=true&nickname=${encodeURIComponent(nickname)}`);
     } else {
-      console.error("Failed to submit score:", response.errorMessage);
-      // Still navigate back, just without highlighting
-      router.push("/");
+      console.warn("[game] Remote submit failed, score saved locally:", response.errorMessage);
+      navigate(`/?submitted=true&nickname=${encodeURIComponent(nickname)}`);
     }
-  }, [nickname, averageMs, reactionTimes, router]);
+  }, [nickname, averageMs, reactionTimes, navigate]);
 
   const handleReturnHome = useCallback(() => {
-    router.push("/");
-  }, [router]);
+    navigate("/");
+  }, [navigate]);
 
-  // Start game on mount - only once, prevent React Strict Mode double-fire
+  // ─── Start game on mount ───
   useEffect(() => {
-    // Prevent double-start in React Strict Mode
-    if (gameStartedRef.current) return;
-    if (!canvasRef.current) return;
-    
+    if (gameStartedRef.current || !canvasRef.current) return;
+    if (!nickname || nickname.trim().length < 3) return;
+
     gameStartedRef.current = true;
 
     const initAndStart = async () => {
-      // Initialize audio (requires user interaction)
       await AudioSynth.init();
       await AudioSynth.resume();
 
-      // Initialize or get existing engine
       if (!engineRef.current) {
         engineRef.current = getGameEngine();
         engineRef.current.init(canvasRef.current!);
@@ -73,7 +89,6 @@ export function GameClient({ nickname }: GameClientProps) {
       setGameState("playing");
       setIsPlaying(true);
 
-      // Start the game with stable callback references
       engineRef.current.startGame({
         onComplete: (result: GameResult) => {
           setReactionTimes(result.reactionTimes);
@@ -89,13 +104,11 @@ export function GameClient({ nickname }: GameClientProps) {
           setIsPlaying(false);
           AudioSynth.playFailureBuzz();
         },
-        onBarStopped: () => {
+        onBarStopped: (_barNumber: number, _reactionTime: number) => {
           AudioSynth.playStopBeep();
         },
         onStateChange: (state: GameState) => {
-          if (state === "moving") {
-            AudioSynth.playAscendingArpeggio();
-          }
+          if (state === "moving") AudioSynth.playAscendingArpeggio();
         },
       });
     };
@@ -105,11 +118,14 @@ export function GameClient({ nickname }: GameClientProps) {
     return () => {
       engineRef.current?.stop();
     };
-  }, []); // Empty dependency array - run only on mount
+  }, [nickname]);
+
+  // Don't render game when nickname is invalid
+  if (!nickname || nickname.trim().length < 3) return null;
 
   return (
     <div className="game-container" data-testid="game-container">
-      {/* Game Stage - 85% of viewport */}
+      {/* Game Stage — 85 % of viewport */}
       <div className="game-stage">
         <canvas
           ref={canvasRef}
@@ -151,7 +167,7 @@ export function GameClient({ nickname }: GameClientProps) {
         )}
       </div>
 
-      {/* Control Zone - 15% of viewport */}
+      {/* Control Zone — 15 % of viewport */}
       <div className="control-zone">
         {gameState === "completed" || gameState === "failed" ? (
           <button

@@ -1,15 +1,15 @@
-"use client";
-
 interface StopButtonProps {
   onStop: () => void;
   disabled: boolean;
 }
 
+/**
+ * Large touch-friendly stop button for the game control zone.
+ * Responds to both click and touch events for mobile play.
+ */
 export function StopButton({ onStop, disabled }: StopButtonProps) {
   const handleClick = () => {
-    if (!disabled) {
-      onStop();
-    }
+    if (!disabled) onStop();
   };
 
   return (

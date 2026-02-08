@@ -32,7 +32,7 @@ Workflow: Run headed during development to verify functionality alongside the lo
 
 
 
-Web game Stack: React/Next.js + .NET 10 API(Azure Static Web Site / Azure API)
+Web game Stack: React + .NET 10 API(Azure Static Web Site / Azure API)
 UI/UX: Use Tailwind CSS v4 for high-performance, utility-first styling.
 Rendering: Leverage Next.js App Router with React Server Components (RSC) to minimize client-side JavaScript.
 Back-end: Use Next.js BFF to work together with .NET Api Server Actions for simple state mutations and .NET 10 Functions for heavy lifting or game logic.

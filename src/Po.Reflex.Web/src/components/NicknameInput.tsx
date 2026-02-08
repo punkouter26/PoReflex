@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useCallback, useEffect } from "react";
 
 interface NicknameInputProps {
@@ -12,46 +10,49 @@ const MIN_LENGTH = 3;
 const MAX_LENGTH = 20;
 const VALID_PATTERN = /^[A-Za-z0-9_]*$/;
 
-export function NicknameInput({ value, onChange, onValidChange }: NicknameInputProps) {
+/**
+ * Controlled nickname input with real-time validation.
+ * Rules match the server-side NicknameValidator (3-20 alphanumeric + underscore).
+ */
+export function NicknameInput({
+  value,
+  onChange,
+  onValidChange,
+}: NicknameInputProps) {
   const [errorMessage, setErrorMessage] = useState("");
   const [hasError, setHasError] = useState(false);
   const [touched, setTouched] = useState(false);
 
-  const validateNickname = useCallback((val: string): { isValid: boolean; error: string } => {
-    if (val.length === 0) {
-      return { isValid: false, error: "" };
-    }
-
-    if (val.length < MIN_LENGTH) {
-      return { isValid: false, error: `Nickname must be at least ${MIN_LENGTH} characters` };
-    }
-
-    if (val.length > MAX_LENGTH) {
-      return { isValid: false, error: `Nickname must be at most ${MAX_LENGTH} characters` };
-    }
-
-    if (!VALID_PATTERN.test(val)) {
-      return { isValid: false, error: "Only letters, numbers, and underscores allowed" };
-    }
-
-    return { isValid: true, error: "" };
-  }, []);
+  const validateNickname = useCallback(
+    (val: string): { isValid: boolean; error: string } => {
+      if (val.length === 0) return { isValid: false, error: "" };
+      if (val.length < MIN_LENGTH)
+        return {
+          isValid: false,
+          error: `Nickname must be at least ${MIN_LENGTH} characters`,
+        };
+      if (val.length > MAX_LENGTH)
+        return {
+          isValid: false,
+          error: `Nickname must be at most ${MAX_LENGTH} characters`,
+        };
+      if (!VALID_PATTERN.test(val))
+        return {
+          isValid: false,
+          error: "Only letters, numbers, and underscores allowed",
+        };
+      return { isValid: true, error: "" };
+    },
+    []
+  );
 
   const handleInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      let newValue = e.target.value;
-
-      // Remove invalid characters as typed
-      newValue = newValue.replace(/[^A-Za-z0-9_]/g, "");
-
-      // Truncate to max length
-      if (newValue.length > MAX_LENGTH) {
-        newValue = newValue.slice(0, MAX_LENGTH);
-      }
+      let newValue = e.target.value.replace(/[^A-Za-z0-9_]/g, "");
+      if (newValue.length > MAX_LENGTH) newValue = newValue.slice(0, MAX_LENGTH);
 
       onChange(newValue);
 
-      // Validate in real-time after user starts typing
       if (touched || newValue.length > 0) {
         setTouched(true);
         const { isValid, error } = validateNickname(newValue);
@@ -71,7 +72,7 @@ export function NicknameInput({ value, onChange, onValidChange }: NicknameInputP
     onValidChange(isValid);
   }, [value, validateNickname, onValidChange]);
 
-  // Initial validation
+  // Re-validate when value changes externally (e.g. restored from localStorage)
   useEffect(() => {
     if (value.length > 0) {
       const { isValid } = validateNickname(value);

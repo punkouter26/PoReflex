@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Azure.Identity;
 using FluentValidation;
 using MediatR;
@@ -58,6 +59,7 @@ builder.Host.UseSerilog();
 
 // Add services
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "PoReflex API", Version = "v1" });
@@ -78,13 +80,13 @@ builder.Services.AddSingleton<ILeaderboardRepository, LeaderboardRepository>();
 builder.Services.AddMetrics();
 builder.Services.AddSingleton<GameMetrics>();
 
-// CORS for Next.js frontend
+// CORS for React (Vite) frontend
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
         var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-            ?? ["http://localhost:3000"];
+            ?? ["http://localhost:5173"];
         
         policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
@@ -98,15 +100,18 @@ var app = builder.Build();
 // Configure middleware
 if (app.Environment.IsDevelopment())
 {
+    app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "PoReflex API v1"));
+
+    // Root redirect to Swagger UI in development
+    app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
     
-    // #3 - Skip HTTPS redirect in development to avoid port warning
+    // Skip HTTPS redirect in development to avoid port warning
     Log.Information("Development mode: HTTPS redirect disabled");
 }
 else
 {
-    // #3 - Only use HTTPS redirect in production
     app.UseHttpsRedirection();
 }
 
@@ -233,8 +238,101 @@ app.MapPost("/api/game/score", async (
 .WithName("SubmitScore")
 .WithTags("Game");
 
+// Diagnostics endpoint — exposes configuration values with masked secrets
+app.MapGet("/diag", (IConfiguration config, IWebHostEnvironment env) =>
+    BuildDiagResponse(config, env))
+    .WithTags("Diagnostics")
+    .ExcludeFromDescription();
+
+app.MapGet("/api/diag", (IConfiguration config, IWebHostEnvironment env) =>
+    BuildDiagResponse(config, env))
+    .WithName("GetDiagnostics")
+    .WithTags("Diagnostics");
+
 Log.Information("PoReflex API starting...");
 app.Run();
 
 // Make Program accessible for integration tests
-public partial class Program { }
+public partial class Program
+{
+    /// <summary>
+    /// Build diagnostics response with masked secrets.
+    /// Hides the middle portion of any value for security.
+    /// </summary>
+    private static IResult BuildDiagResponse(IConfiguration config, IWebHostEnvironment env)
+    {
+        var sections = new Dictionary<string, List<object>>();
+
+        // Connection Strings
+        var connStrings = new List<object>();
+        var csSection = config.GetSection("ConnectionStrings");
+        foreach (var child in csSection.GetChildren())
+        {
+            connStrings.Add(new { key = child.Key, value = MaskValue(child.Value) });
+        }
+        sections["ConnectionStrings"] = connStrings;
+
+        // Key Vault
+        var kvSection = new List<object>
+        {
+            new { key = "KeyVault:Uri", value = MaskValue(config["KeyVault:Uri"]) }
+        };
+        sections["KeyVault"] = kvSection;
+
+        // Application Insights
+        var appInsights = config["ApplicationInsights:ConnectionString"]
+            ?? config["PoReflex-AppInsightsConnectionString"];
+        sections["ApplicationInsights"] = new List<object>
+        {
+            new { key = "ConnectionString", value = MaskValue(appInsights) }
+        };
+
+        // CORS
+        var corsOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        sections["CORS"] = corsOrigins.Select(o => new { key = "AllowedOrigin", value = (object)o }).Cast<object>().ToList();
+
+        // Rate Limiting
+        sections["RateLimiting"] = new List<object>
+        {
+            new { key = "RequestsPerMinute", value = (object)(config["RateLimiting:RequestsPerMinute"] ?? "10") },
+            new { key = "WindowSizeMinutes", value = (object)(config["RateLimiting:WindowSizeMinutes"] ?? "1") }
+        };
+
+        // Azure settings
+        sections["Azure"] = new List<object>
+        {
+            new { key = "Retry:MaxRetries", value = (object)(config["Azure:Retry:MaxRetries"] ?? "4") }
+        };
+
+        // URLs
+        sections["Hosting"] = new List<object>
+        {
+            new { key = "Urls", value = (object)(config["Urls"] ?? "(default)") },
+            new { key = "AllowedHosts", value = (object)(config["AllowedHosts"] ?? "*") }
+        };
+
+        var result = new
+        {
+            environment = env.EnvironmentName,
+            sections
+        };
+
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Masks the middle portion of a value for security display.
+    /// Example: "abcdefghijk" → "abc*****ijk"
+    /// </summary>
+    private static string MaskValue(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "(not set)";
+        if (value.Length <= 6) return new string('*', value.Length);
+
+        var showChars = Math.Min(3, value.Length / 4);
+        var prefix = value[..showChars];
+        var suffix = value[^showChars..];
+        var masked = new string('*', value.Length - showChars * 2);
+        return $"{prefix}{masked}{suffix}";
+    }
+}

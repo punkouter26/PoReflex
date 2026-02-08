@@ -14,6 +14,10 @@ Accept: application/json
 GET {{baseUrl}}/health/detail HTTP/1.1
 Accept: application/json
 
+### Diagnostics — masked config values
+GET {{baseUrl}}/diag HTTP/1.1
+Accept: application/json
+
 ### Get Leaderboard (Top 100)
 GET {{baseUrl}}/leaderboard HTTP/1.1
 Accept: application/json

@@ -18,6 +18,7 @@ services:
     language: js
     host: staticwebapp
     resourceName: poreflex-web
+    dist: dist
 
 # Resource groups
 resourceGroups:
@@ -35,8 +36,8 @@ hooks:
     shell: pwsh
     run: |
       Write-Host "Resources configured successfully!"
-      Write-Host "API URL: https://poreflex-api.azurewebsites.net"
-      Write-Host "Web URL: https://icy-sky-0d994161e.2.azurestaticapps.net"
+      Write-Host "API URL: https://app-poreflex-api.azurewebsites.net"
+      Write-Host "Web URL: https://witty-desert-0679bc00f.2.azurestaticapps.net"
       
   predeploy:
     shell: pwsh
@@ -52,5 +53,5 @@ hooks:
     shell: pwsh
     run: |
       Write-Host "Deployment complete!"
-      Write-Host "API: https://poreflex-api.azurewebsites.net/health"
-      Write-Host "Web: https://icy-sky-0d994161e.2.azurestaticapps.net"
+      Write-Host "API: https://app-poreflex-api.azurewebsites.net/health"
+      Write-Host "Web: https://witty-desert-0679bc00f.2.azurestaticapps.net"

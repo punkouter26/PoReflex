@@ -2,24 +2,21 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch PoReflex",
+      "name": "Launch PoReflex (Full Stack)",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build",
-      "program": "${workspaceFolder}/src/Po.Reflex.Api/bin/Debug/net9.0/Po.Reflex.Api.dll",
+      "preLaunchTask": "start-fullstack",
+      "program": "${workspaceFolder}/src/Po.Reflex.Api/bin/Debug/net10.0/Po.Reflex.Api.dll",
       "args": [],
       "cwd": "${workspaceFolder}/src/Po.Reflex.Api",
       "stopAtEntry": false,
       "serverReadyAction": {
         "action": "openExternally",
-        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
-        "uriFormat": "%s"
+        "pattern": "\\bNow listening on:",
+        "uriFormat": "http://localhost:5173"
       },
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "sourceFileMap": {
-        "/Views": "${workspaceFolder}/Views"
       }
     },
     {

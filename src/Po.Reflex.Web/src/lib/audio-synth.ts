@@ -1,39 +1,35 @@
 /**
- * Audio Synth for game sound effects
- * Uses Web Audio API for low-latency sound generation
+ * Audio Synth for game sound effects.
+ * Uses Web Audio API for low-latency sound generation.
+ *
+ * Pattern: Singleton — single AudioContext shared across the app lifetime.
  */
 
 class AudioSynthClass {
   private audioContext: AudioContext | null = null;
   private isInitialized = false;
 
-  /**
-   * Initialize the audio context (requires user interaction first)
-   */
+  /** Initialize the audio context (requires prior user interaction). */
   async init(): Promise<void> {
     if (this.isInitialized) return;
 
     try {
       this.audioContext = new AudioContext();
       this.isInitialized = true;
-      console.log("AudioSynth initialized");
+      console.log("[audio] AudioSynth initialized");
     } catch (error) {
-      console.warn("Failed to initialize AudioContext:", error);
+      console.warn("[audio] Failed to initialize AudioContext:", error);
     }
   }
 
-  /**
-   * Resume audio context (required after user interaction)
-   */
+  /** Resume a suspended audio context after user gesture. */
   async resume(): Promise<void> {
     if (this.audioContext?.state === "suspended") {
       await this.audioContext.resume();
     }
   }
 
-  /**
-   * Play a beep sound when stop is pressed
-   */
+  /** Short beep when stop is pressed. */
   playStopBeep(): void {
     if (!this.audioContext) return;
 
@@ -56,9 +52,7 @@ class AudioSynthClass {
     oscillator.stop(this.audioContext.currentTime + 0.1);
   }
 
-  /**
-   * Play ascending arpeggio when bar starts moving
-   */
+  /** Ascending arpeggio when bar starts moving. */
   playAscendingArpeggio(): void {
     if (!this.audioContext) return;
 
@@ -66,27 +60,25 @@ class AudioSynthClass {
     const duration = 0.1;
 
     notes.forEach((freq, i) => {
-      const oscillator = this.audioContext!.createOscillator();
-      const gainNode = this.audioContext!.createGain();
+      const osc = this.audioContext!.createOscillator();
+      const gain = this.audioContext!.createGain();
 
-      oscillator.connect(gainNode);
-      gainNode.connect(this.audioContext!.destination);
+      osc.connect(gain);
+      gain.connect(this.audioContext!.destination);
 
-      oscillator.frequency.value = freq;
-      oscillator.type = "sine";
+      osc.frequency.value = freq;
+      osc.type = "sine";
 
       const startTime = this.audioContext!.currentTime + i * duration;
-      gainNode.gain.setValueAtTime(0.2, startTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+      gain.gain.setValueAtTime(0.2, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
 
-      oscillator.start(startTime);
-      oscillator.stop(startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
     });
   }
 
-  /**
-   * Play failure buzz sound
-   */
+  /** Low-frequency buzz on failure. */
   playFailureBuzz(): void {
     if (!this.audioContext) return;
 
@@ -96,7 +88,7 @@ class AudioSynthClass {
     oscillator.connect(gainNode);
     gainNode.connect(this.audioContext.destination);
 
-    oscillator.frequency.value = 100; // Low frequency buzz
+    oscillator.frequency.value = 100;
     oscillator.type = "sawtooth";
 
     gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
@@ -109,9 +101,7 @@ class AudioSynthClass {
     oscillator.stop(this.audioContext.currentTime + 0.3);
   }
 
-  /**
-   * Play success sound
-   */
+  /** Celebratory ascending chord on success. */
   playSuccessSound(): void {
     if (!this.audioContext) return;
 
@@ -119,24 +109,24 @@ class AudioSynthClass {
     const duration = 0.15;
 
     notes.forEach((freq, i) => {
-      const oscillator = this.audioContext!.createOscillator();
-      const gainNode = this.audioContext!.createGain();
+      const osc = this.audioContext!.createOscillator();
+      const gain = this.audioContext!.createGain();
 
-      oscillator.connect(gainNode);
-      gainNode.connect(this.audioContext!.destination);
+      osc.connect(gain);
+      gain.connect(this.audioContext!.destination);
 
-      oscillator.frequency.value = freq;
-      oscillator.type = "sine";
+      osc.frequency.value = freq;
+      osc.type = "sine";
 
       const startTime = this.audioContext!.currentTime + i * duration * 0.8;
-      gainNode.gain.setValueAtTime(0.2, startTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+      gain.gain.setValueAtTime(0.2, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
 
-      oscillator.start(startTime);
-      oscillator.stop(startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
     });
   }
 }
 
-// Singleton instance
+/** Global singleton instance. */
 export const AudioSynth = new AudioSynthClass();
