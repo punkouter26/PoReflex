@@ -16,7 +16,7 @@ Once the waiting period expires, the selected bar begins ascending from the bott
 
 The application utilizes performance timing mechanisms capable of sub-millisecond precision, specifically achieving accuracy to within fifty microseconds (0.05 milliseconds). Each reaction is measured from the exact moment the bar begins its upward movement to the instant the player activates the stop control. This measurement is then rounded to the nearest 0.05 millisecond increment, providing consistent and scientifically valid timing data.
 
-The timing system accounts for rendering latency and input lag by leveraging the browser's performance measurement APIs, which operate independently of frame rendering cycles. This ensures that variations in display refresh rates or temporary system performance fluctuations do not compromise measurement accuracy.
+The timing system accounts for rendering latency and input lag by leveraging platform-native high-precision timing mechanisms, which operate independently of frame rendering cycles. This ensures that variations in display refresh rates or temporary system performance fluctuations do not compromise measurement accuracy.
 
 ### Failure Conditions
 
@@ -26,7 +26,7 @@ Similarly, if the bar reaches maximum height before the player responds, the ses
 
 ## Audio Feedback System
 
-The application incorporates a sophisticated audio synthesis engine built on the Web Audio API, generating real-time sound effects without requiring external audio file assets. This approach eliminates loading delays and provides precise temporal alignment between visual events and auditory feedback.
+The application incorporates a sophisticated audio synthesis engine utilizing platform audio synthesis capabilities, generating real-time sound effects without requiring external audio file assets. This approach eliminates loading delays and provides precise temporal alignment between visual events and auditory feedback.
 
 When a bar transitions from waiting to moving state, the system plays an ascending three-note arpeggio (C4, E4, G4) using sine wave oscillators. This auditory cue provides redundant stimulus information for players who may benefit from multi-modal input. Each successful stop action triggers a short square-wave beep at 880 Hz (A5 note), providing immediate confirmation of input registration.
 
@@ -36,7 +36,7 @@ Upon completing all six trials successfully, the application generates a celebra
 
 ### Local Storage Strategy
 
-The application implements a comprehensive offline-first data persistence strategy, ensuring complete functionality regardless of network availability. All user scores, reaction time details, and nickname information are immediately persisted to browser local storage upon completion of a game session. This local persistence serves dual purposes: providing an offline gameplay experience and acting as a buffer against network failures during score submission.
+The application implements a comprehensive offline-first data persistence strategy, ensuring complete functionality regardless of network availability. All user scores, reaction time details, and nickname information are immediately persisted to local client-side storage upon completion of a game session. This local persistence serves dual purposes: providing an offline gameplay experience and acting as a buffer against network failures during score submission.
 
 When the backend API is unreachable, the application transparently switches to display locally stored scores in the leaderboard interface, maintaining the competitive experience even in degraded network conditions. Players receive clear visual indication of offline mode through status messaging, but gameplay remains uninterrupted.
 
